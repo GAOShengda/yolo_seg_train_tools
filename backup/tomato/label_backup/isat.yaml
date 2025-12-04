@@ -1,0 +1,9 @@
+label:
+- color: '#000000'
+  name: __background__
+- color: '#00ff00'
+  name: apple
+- color: '#ff392b'
+  name: leaf
+- color: '#5500ff'
+  name: tomato
