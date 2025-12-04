@@ -67,10 +67,27 @@ isat-sam
 - 把图片放到 `data/<dataset>/img/`。
 - 把标注（YOLO `.txt`）放到 `data/<dataset>/label/`，并确保 `classification.txt` 存在（每行一个类别）。
 
+注意：如果你使用的是 ISAT 等标注工具导出的 TXT，且类别 ID 不是从 0 开始（例如从 1 开始），需要在第二步运行 `01_convert_class_ids.py` 对标签文件进行 ID 重映射，确保训练时类别编号与 `classification.txt` 中的顺序一致。
+
+简要使用说明：
+- **何时运行**：在把图片和标注放入 `data/<dataset>/img/` 与 `data/<dataset>/label/` 之后、在执行划分或训练之前运行。
+- **功能**：批量将标签文件中第一列的类别 ID 按脚本内的 `class_remapping` 规则替换，并可将原标签目录备份到 `label_backup`（脚本会交互询问确认）。
+- **注意事项**：
+    - 请先检查并修改脚本顶部的 `class_remapping`、`labels_dir` 与 `backup_dir` 路径，确保指向你的数据目录。
+    - 脚本会尝试备份整个标签目录，推荐在运行前确认有足够磁盘空间。
+    - 如果不确定，先运行脚本并输入 `n` 或使用备份功能做一次试验。
+- **运行示例**：
+
+```bash
+python 01_convert_class_ids.py
+```
+
+脚本会展示 `classification.txt` 的原始类别和修改后的映射，要求用户确认后才会写回并对 `.txt` 标签进行替换。
+
 3. 运行脚本进行转换/检查/划分
 
 ```bash
-python 01_convert_labelme_to_yolo_seg.py
+python 01_convert_isat_to_yolo_seg.py
 ```
 
 脚本会：
