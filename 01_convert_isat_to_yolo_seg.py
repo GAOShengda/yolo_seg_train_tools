@@ -13,21 +13,21 @@ import os.path as osp
 - 按图片列表随机划分数据集（支持两种模式）：
   - 2-way（train/val = 8:2），当用户输入 `n` 时启用；
   - 3-way（train/test/val = 7:2:1），当用户输入 `y` 或直接回车（默认）时启用；
-- 将划分结果复制到 `output_dir` 下的 `images/{train,val,test}` 和 `labels/{train,val,test}` 子目录；
+- 将划分结果复制到 `dataset_output` 下的 `images/{train,val,test}` 和 `labels/{train,val,test}` 子目录；
 - 根据 `classification_txt_path` 中的类别顺序生成 `dataset.yaml`，包含 `path`、`train`、`val`、可选 `test`、`nc`、`names` 字段，供 YOLO 训练使用。
 
 主要配置（位于文件顶部，需根据项目调整）:
-- `root`：数据根目录（脚本默认使用相对路径，例如 `data/tomato`）。
+- `raw_data`：原始数据根目录（脚本默认使用相对路径，例如 `raw_data/tomato`）。
 - `classification_txt_path`：包含类别名称的文本文件（每行一个类别），脚本会按此文件顺序生成 `names`。
 - `images_dir`：图片目录（脚本会在此查找图片，支持常见扩展名和大小写）。
 - `labels_dir`：标注目录，期望包含与图片同名的 `.txt` 文件（YOLO 格式）。
-- `output_dir`：划分后数据输出目录（包含 `images/` 和 `labels/` 子目录）。
+- `dataset_output`：划分后数据输出目录（包含 `images/` 和 `labels/` 子目录）。
 
 运行流程：
 1. 读取并加载配置（请确保 `classification_txt_path` 指向有效文件）。
 2. 检查 `images_dir` 下的每张图片是否在 `labels_dir` 有对应 `.txt`，若缺失脚本会中止并打印缺失项。
 3. 提示用户选择是否生成 test 集合（默认生成 3-way 划分）；按比例随机划分并复制对应图片与 `.txt`。
-4. 在 `output_dir` 中生成 `dataset.yaml`；打印结果路径。
+4. 在 `dataset_output` 中生成 `dataset.yaml`；打印结果路径。
 
 示例运行：
     python 01_convert_labelme_to_yolo_seg.py
@@ -42,15 +42,16 @@ import os.path as osp
 # 默认使用脚本同级目录下的 `data/` 作为根目录，图片与标注分别放在
 # `data/img/` 和 `data/label/`。如需其他路径，请修改下面变量。
 # =====================
-root = "data/tomato"  # 根目录
-classification_txt_path = r"/home/wsl_school/workspace/yolov8-seg-potato/data/tomato/label/classification.txt"
+dataset_name = "tomato"  # 数据集名称
+raw_data = f"raw_data/{dataset_name}"  # 原始数据根目录
+dataset_output = f"datasets/{dataset_name}"  # 划分后数据输出目录
+classification_txt_path = rf"raw_data/{dataset_name}/label/classification.txt"
 with open(classification_txt_path, 'r', encoding='utf-8') as f:
     class_list = [line.strip() for line in f if line.strip()]
 # 图片文件夹（修改为你实际的图片文件夹名，例如 'img' 或 'JPEGImages'）
-images_dir = osp.join(root, "img")
+images_dir = osp.join(raw_data, "img")
 # 标注文件夹（包含 .json/.txt，例如 'label'）
-labels_dir = osp.join(root, "label")
-output_dir = osp.join(root, "dataset")
+labels_dir = osp.join(raw_data, "label")
 
 random.seed(42)
 
@@ -58,7 +59,7 @@ random.seed(42)
 # 主流程
 # =====================
 def main():
-    yolo_seg_splitter = YoloDatasetSplitter(images_dir, labels_dir, output_dir, class_list)
+    yolo_seg_splitter = YoloDatasetSplitter(dataset_name, images_dir, labels_dir, dataset_output, class_list)
     # -----------------------
     # 步骤 1：检查 TXT 是否完整
     # -----------------------
@@ -77,10 +78,11 @@ def main():
 
 
 class YoloDatasetSplitter:
-    def __init__(self, images_dir, labels_dir, output_dir, class_list):
+    def __init__(self, dataset_name, images_dir, labels_dir, dataset_output, class_list):
+        self.dataset_name = dataset_name
         self.images_dir = images_dir
         self.labels_dir = labels_dir
-        self.output_dir = output_dir
+        self.dataset_output = dataset_output
         self.class_list = class_list
         self.pic_formats = [".jpeg", ".JPEG", ".jpg", ".JPG", ".png", ".PNG", ".bmp", ".BMP", ".tif", ".TIF", ".tiff", ".TIFF", ".webp", ".WEBP"]
         self.image_files = []
@@ -96,7 +98,7 @@ class YoloDatasetSplitter:
         if self.is_testDataset_required:
             dirs.extend(["images/test", "labels/test"])
         for d in dirs:
-            path = osp.join(self.output_dir, d)
+            path = osp.join(self.dataset_output, d)
             if not osp.exists(path):
                 os.makedirs(path)
         print("✅ 目录检查完成")
@@ -128,11 +130,11 @@ class YoloDatasetSplitter:
             if img_path is None:
                 print(f"⚠ 找不到图片：{base}，已跳过")
                 continue
-            dst_img = osp.join(self.output_dir, "images", subset_name, osp.basename(img_path))
+            dst_img = osp.join(self.dataset_output, "images", subset_name, osp.basename(img_path))
             shutil.copy(img_path, dst_img)
 
             src_txt = osp.join(self.labels_dir, base + ".txt")
-            dst_txt = osp.join(self.output_dir, "labels", subset_name, base + ".txt")
+            dst_txt = osp.join(self.dataset_output, "labels", subset_name, base + ".txt")
             if osp.exists(src_txt):
                 shutil.copy(src_txt, dst_txt)
             else:
@@ -140,14 +142,12 @@ class YoloDatasetSplitter:
     
     def check_txt_files(self):
         """检查每张图片是否都有对应的 TXT 文件"""
-        print("检测 TXT 文件完整性...")
         for img in self.image_files:
             base = osp.splitext(osp.basename(img))[0]
             txt_path = osp.join(self.labels_dir, base + ".txt")
             if not osp.exists(txt_path):
                 print(f"❌ 缺少 TXT 文件（在标注文件夹中）：{base}.txt")
                 return False
-        print("✅ 所有图片都存在 TXT，进入下一步")
         return True
     
     def dataset_split(self):
@@ -185,14 +185,15 @@ class YoloDatasetSplitter:
             self.copy_split(test_bases, "test")
         self.copy_split(val_bases, "val")
 
-        print("🎉 数据划分完成！所有数据已存入 dataset/ 目录")
+        print(f"🎉 数据划分完成！所有数据已存入 {self.dataset_output}/ 目录")
         
     def generate_yaml(self):
         # 生成 dataset YAML 文件
-        yaml_path = osp.join(self.output_dir, "dataset.yaml")
-        abs_out = osp.abspath(self.output_dir).replace('\\', '/')
+        yaml_path = osp.join(self.dataset_output, f"{self.dataset_name}.yaml")
+        dataset_path = self.dataset_name.replace('\\', '/')
         lines = []
-        lines.append(f'path: "{abs_out}"')
+        lines.append(f'# YOLO 数据集描述文件，仅适配 Ultralytics')
+        lines.append(f'path: "{dataset_path}"')
         lines.append("")
         lines.append("train: images/train")
         lines.append("val: images/val")
@@ -203,7 +204,7 @@ class YoloDatasetSplitter:
         lines.append("names:")
         for i, name in enumerate(self.class_list):
             lines.append(f"  {i}: {name}")
-
+        lines.append("")
         with open(yaml_path, 'w', encoding='utf-8') as yf:
             yf.write('\n'.join(lines))
 

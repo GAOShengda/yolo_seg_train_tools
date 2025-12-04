@@ -44,15 +44,15 @@ import datetime
 """
 def main():
     """主函数"""
-    classification_txt_path = r"/home/wsl_school/workspace/yolov8-seg-potato/data/tomato/label/classification.txt"
+    classification_txt_path = r"raw_data/tomato/label/classification.txt"
     class_remapping = {
             2: 0,  # 类别1 -> 类别0
             3: 1  # 类别2 -> 类别1
         }
 
     # 配置路径
-    labels_dir = r"/home/wsl_school/workspace/yolov8-seg-potato/data/tomato/label"
-    backup_dir = r"/home/wsl_school/workspace/yolov8-seg-potato/data/tomato/label_backup"
+    labels_dir = r"raw_data/tomato/label"
+    backup_dir = r"raw_data/tomato/label_backup"
 
     print("分割标签类别ID转换脚本")
     print("=" * 80)
@@ -117,10 +117,7 @@ class ClassIDConverter:
             'converted_annotations': 0,
             'dropped_annotations': 0
         }
-
-        # 类别映射的展示与确认将在读取 classification.txt 后进行
         
-        # 在正式运行前，根据 class_remapping 筛选并更新 classification.txt
     def backup_and_filter_classification(self, classification_txt_path):
         """
         读取 classification.txt，展示原始类别与新的类别映射，要求用户确认。
@@ -186,22 +183,20 @@ class ClassIDConverter:
                 print(f"{red}错误: 修改后的类别映射为空，请检查classification.txt 或类别映射class_remapping是否存在问题！{reset}")
                 return False
 
-            # 询问用户是否确认类别名称修改
+            # 询问是否确认类别名称修改
             try:
                 confirm_names = input("\n确认要将 classification.txt 修改为以上内容吗？(y/n): ")
             except Exception:
                 confirm_names = 'n'
-
+                
             if confirm_names.lower() != 'y':
                 red = "\033[31m"
                 reset = "\033[0m"
-                print(f"{red}分类名称修改未确认，程序结束。{reset}")
+                print(f"{red}类别名称修改未确认，程序结束。{reset}")
                 return False
 
-            # 用户确认后，先做 labels_dir 的备份（若指定），再写入 classification.txt
             if self.backup_dir:
                 try:
-                    ts_old = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
                     if os.path.exists(self.backup_dir):
                         red = "\033[31m"
                         reset = "\033[0m"
