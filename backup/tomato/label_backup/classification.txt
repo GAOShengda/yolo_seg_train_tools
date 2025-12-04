@@ -1,4 +1,0 @@
-__background__
-apple
-leaf
-tomato

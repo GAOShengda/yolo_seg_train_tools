@@ -1,4 +1,4 @@
-# yolov8-seg-potato（修改版）
+# yolo_seg_train_tools
 
 这是对原作者 katongZL 在 Gitee 上的项目 `yolov8-seg-potato`（https://gitee.com/katongZL/yolov8-seg-potato）进行的修改与扩展后的版本。
 
