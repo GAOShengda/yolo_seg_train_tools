@@ -5,26 +5,27 @@
 主要改动：
 - 移除了源代码中的JSON-TXT的转换，请在使用isat-sam时导出yolo格式的数据集标注；
 - 重构并增强了数据集划分逻辑，支持 2-way（train/val=8:2）和 3-way（train/test/val=7:2:1）划分；
-- 自动生成 YOLO 格式的 `<dataset_name>.yaml`，并支持从 `classification.txt` 读取类别顺序；
+- 自动生成 YOLO 格式的 `<DATASET_NAME>.yaml`，并支持从 `classification.txt` 读取类别顺序；
 - 改进了图片扩展名适配、大小写兼容以及目录管理逻辑。
+- 添加了关于数据集增强的工具，存放在tools文件夹中
 
 > 原始项目使用 Apache-2.0 许可；本仓库基于其代码进行修改。请在传播或再发布时保留原始许可信息并遵守 Apache-2.0 条款。
 
 ---
 
 ## 目录与数据约定
-
+- 运行各个python文件前，请注意每个python文件夹指定的数据集`DATASET_NAME`是否正确，默认是tomato
 - 假设项目根目录为仓库根（本 README 所在目录）。
-- `raw_data/`：原始数据目录（可在脚本顶部修改）。
-	- `raw_data/<dataset_name>/img/`：放图片（支持 `.jpg/.jpeg/.png/` 大小写扩展名）。
-	- `raw_data/<dataset_name>/label/`：放标注文件（YOLO `.txt`，或 ISAT/Labelme 导出的 `.json`（需先转换））。
-	- `raw_data/<dataset_name>/label/classification.txt`：类别文件，每行一个类别，脚本会按此顺序生成 `names`。
+- `raw_datasets/`：原始数据目录（可在脚本顶部修改）。
+	- `raw_datasets/<DATASET_NAME>/images/`：放图片（支持 `.jpg/.jpeg/.png/` 大小写扩展名）。
+	- `raw_datasets/<DATASET_NAME>/labels/`：放标注文件（YOLO `.txt`，或 ISAT/Labelme 导出的 `.json`（需先转换））。
+	- `raw_datasets/<DATASET_NAME>/labels/classification.txt`：类别文件，每行一个类别，脚本会按此顺序生成 `names`。
 
 脚本输出：
-- `datasets/<dataset_name>/`：划分后数据集根目录，包含：
+- `datasets/<DATASET_NAME>/`：划分后数据集根目录，包含：
     - `images/train`、`images/val`、`images/test`（如启用 test）
     - `labels/train`、`labels/val`、`labels/test`（如启用 test）
-    - `<dataset_name>.yaml`（自动生成，供 YOLOv8 训练使用）
+    - `<DATASET_NAME>.yaml`（自动生成，供 YOLOv8 训练使用）
 
 ---
 
@@ -64,14 +65,14 @@ isat-sam
 ![2.png](images/2.png)
 
 2. 准备数据：
-- 把图片放到 `data/<dataset>/img/`。
-- 把标注（YOLO `.txt`）放到 `data/<dataset>/label/`，并确保 `classification.txt` 存在（每行一个类别）。
+- 把图片放到 `raw_datasets/<DATASET_NAME>/images/`。
+- 把标注（YOLO `.txt`）放到 `raw_datasets/<DATASET_NAME>/labels/`，并确保 `classification.txt` 存在（每行一个类别）。
 
 注意：如果你使用的是 ISAT 等标注工具导出的 TXT，且类别 ID 不是从 0 开始（例如从 1 开始），需要在第二步运行 `01_convert_class_ids.py` 对标签文件进行 ID 重映射，确保训练时类别编号与 `classification.txt` 中的顺序一致。
 
 简要使用说明：
-- **何时运行**：在把图片和标注放入 `data/<dataset>/img/` 与 `data/<dataset>/label/` 之后、在执行划分或训练之前运行。
-- **功能**：批量将标签文件中第一列的类别 ID 按脚本内的 `class_remapping` 规则替换，并可将原标签目录备份到 `label_backup`（脚本会交互询问确认）。
+- **何时运行**：在把图片和标注放入 `raw_datasets/<DATASET_NAME>/images/` 与 `raw_datasets/<DATASET_NAME>/labels/` 之后、在执行划分或训练之前运行。
+- **功能**：批量将标签文件中第一列的类别 ID 按脚本内的 `class_remapping` 规则替换，并可将原标签目录备份到 `labels_backup`（脚本会交互询问确认）。
 - **注意事项**：
     - 请先检查并修改脚本顶部的 `class_remapping`、`labels_dir` 与 `backup_dir` 路径，确保指向你的数据目录。
     - 脚本会尝试备份整个标签目录，推荐在运行前确认有足够磁盘空间。
@@ -84,18 +85,31 @@ python 01_convert_class_ids.py
 
 脚本会展示 `classification.txt` 的原始类别和修改后的映射，要求用户确认后才会写回并对 `.txt` 标签进行替换。
 
-3. 运行脚本进行转换/检查/划分
+3. 数据集增强：
+
+简要使用说明：
+- **功能**：对原始数据集进行增强处理（随机提取图片进行模糊化和色彩空间微调操作），增强后的数据集将保存在`raw_datasets/<DATASET_NAME>_augment/`中。
+- **运行示例**：
 
 ```bash
-python 01_convert_isat_to_yolo_seg.py
+python 01_dataset_augment.py
+```
+
+脚本会展示 `classification.txt` 的原始类别和修改后的映射，要求用户确认后才会写回并对 `.txt` 标签进行替换。
+
+4. 运行脚本进行转换/检查/划分
+
+```bash
+python 02_convert_isat_to_yolo_seg.py
 ```
 
 脚本会：
+- 询问是否对增强后的数据集进行划分（如果存在的话。否则使用原始数据集）。
 - 询问是否生成 `test` 集合（默认回车/是 → 3-way 划分 7:2:1；输入 `n` → 2-way 划分 8:2）。
 - 按选择的划分规则随机划分并复制图片与 `.txt` 到 `data/<dataset>/dataset/` 中。
 - 生成 `dataset.yaml`，其中 `names` 来自 `classification.txt`。
 
-4. 使用 `dataset.yaml` 训练 YOLOv8
+5. 使用 `dataset.yaml` 训练 YOLOv8
 
 ```bash
 # 假设你已经安装并配置了 YOLOv8

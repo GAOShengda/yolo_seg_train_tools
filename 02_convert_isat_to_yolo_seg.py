@@ -39,19 +39,37 @@ import os.path as osp
 
 # =====================
 # 配置区（已修改：支持图片与标注分开放在不同文件夹）
-# 默认使用脚本同级目录下的 `data/` 作为根目录，图片与标注分别放在
-# `data/img/` 和 `data/label/`。如需其他路径，请修改下面变量。
+# 默认使用脚本同级目录下的 `raw_data/` 作为根目录，图片与标注分别放在
+# `raw_datasets/{dataset_name}/images/` 和 `raw_datasets/{dataset_name}/labels/`。如需其他路径，请修改下面变量。
 # =====================
-dataset_name = "tomato"  # 数据集名称
-raw_data = f"raw_data/{dataset_name}"  # 原始数据根目录
+dataset_process = input("处理增强后数据集还是原始数据集？\r\n输入 y 则处理增强后的数据集，输入 n 则处理原始数据集：").strip().lower()
+if dataset_process == "y":
+    candidate_aug = "tomato_augment"  # 增强后数据集名称
+    # 如果增强数据集不存在，则回退为原始数据集
+    if not os.path.isdir(f"raw_datasets/{candidate_aug}"):
+        print(f"⚠️ 增强数据集不存在: raw_datasets/{candidate_aug}，将对原始数据集进行划分。")
+        # 试图推断原始数据集名（去掉 `_augment` 后缀），否则使用默认 'tomato'
+        base_name = candidate_aug.replace('_augment', '')
+        if os.path.isdir(f"raw_datasets/{base_name}"):
+            dataset_name = base_name
+            print(f"使用原始数据集: {dataset_name}")
+        else:
+            dataset_name = 'tomato'
+            print(f"未找到原始数据集，使用默认: {dataset_name}。请检查 raw_datasets/ 目录。")
+    else:
+        dataset_name = candidate_aug
+else:
+    dataset_name = "tomato"  # 数据集名称
+    
+raw_data = f"raw_datasets/{dataset_name}"  # 原始数据根目录
 dataset_output = f"datasets/{dataset_name}"  # 划分后数据输出目录
-classification_txt_path = rf"raw_data/{dataset_name}/label/classification.txt"
+classification_txt_path = rf"raw_datasets/{dataset_name}/labels/classification.txt"
 with open(classification_txt_path, 'r', encoding='utf-8') as f:
     class_list = [line.strip() for line in f if line.strip()]
-# 图片文件夹（修改为你实际的图片文件夹名，例如 'img' 或 'JPEGImages'）
-images_dir = osp.join(raw_data, "img")
-# 标注文件夹（包含 .json/.txt，例如 'label'）
-labels_dir = osp.join(raw_data, "label")
+# 图片文件夹（修改为你实际的图片文件夹名，例如 'images' 或 'JPEGImages'）
+images_dir = osp.join(raw_data, "images")
+# 标注文件夹（包含 .json/.txt，例如 'labels'）
+labels_dir = osp.join(raw_data, "labels")
 
 random.seed(42)
 

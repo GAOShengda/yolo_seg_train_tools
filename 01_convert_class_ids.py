@@ -42,17 +42,19 @@ import datetime
 - 请确保在运行脚本前备份重要数据。
 
 """
+DATASET_NAME = "tomato"  # 数据集名称
+
 def main():
     """主函数"""
-    classification_txt_path = r"raw_data/tomato/label/classification.txt"
+    classification_txt_path = rf"raw_data/{DATASET_NAME}/labels/classification.txt"
     class_remapping = {
             2: 0,  # 类别1 -> 类别0
             3: 1  # 类别2 -> 类别1
         }
 
     # 配置路径
-    labels_dir = r"raw_data/tomato/label"
-    backup_dir = r"raw_data/tomato/label_backup"
+    labels_dir = rf"raw_data/{DATASET_NAME}/labels"
+    backup_dir = rf"raw_data/{DATASET_NAME}/labels_backup"
 
     print("分割标签类别ID转换脚本")
     print("=" * 80)
